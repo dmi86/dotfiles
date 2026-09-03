@@ -70,7 +70,7 @@ can be archived or deleted.
 | Path | Purpose |
 |---|---|
 | `.chezmoi.toml.tmpl` | Generates `~/.config/chezmoi/chezmoi.toml`; prompts for git name/work email/signing key |
-| `.chezmoidata/packages.yaml` | Source of truth for Homebrew formulae/casks, npm globals, VS Code extensions |
+| `.chezmoidata/packages.yaml` | Source of truth for Homebrew formulae/casks and VS Code extensions |
 | `dot_pyenv/default-packages` | Python tools installed into every pyenv-managed version (via `pyenv-default-packages`) |
 | `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, create `~/Develop` |
 | `.chezmoiremove` | Declares `.vimrc` removed — not managed here |

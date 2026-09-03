@@ -16,11 +16,6 @@ echo "==> Homebrew casks"
 brew list --cask {{ . }} >/dev/null 2>&1 || brew install --cask {{ . }}
 {{ end }}
 
-echo "==> npm global packages"
-{{ range .npmGlobal }}
-npm install -g {{ . }}
-{{ end }}
-
 echo "==> VS Code extensions"
 {{ range .vscodeExtensions }}
 code --install-extension {{ . }} --force
