@@ -1,0 +1,46 @@
+if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
+  source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
+fi
+
+export PATH=.:~/bin:~/.local/bin:~/Library/Python/3.11/bin:$PATH
+export EDITOR="vim"
+
+# If no GPG Suite https://help.github.com/articles/telling-git-about-your-gpg-key/
+export GPG_TTY=$TTY
+
+# Allow raw colour codes through `more`; syntax highlighting is handled by the
+# bat-backed `cat` alias in .scripts/aliases.zsh
+export MORE='-R'
+export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=3"
+
+# Configure iTerm2 tab titles based on current directory
+precmd () {
+  window_title="\e]0;${${PWD/#"$HOME"/~}/workspace/w}\a"
+  echo -ne "$window_title"
+}
+
+# load bashcompinit for some old bash completions
+autoload -Uz compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+
+for script in $HOME/.scripts/*; do
+  source $script
+done
+
+setopt hist_ignore_all_dups # remove older duplicate entries from history
+setopt hist_reduce_blanks # remove superfluous blanks from history items
+setopt inc_append_history # save history entries as soon as they are entered
+setopt share_history # share history between different instances of the shell
+
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+
+# add prompt_starship_setup function to Prezto
+setopt prompt_subst interactive_comments
+ZPREZTODIR=${ZPREZTODIR:-${ZDOTDIR:-~}/.zprezto}
+echo 'eval "$(starship init zsh)"' >! $ZPREZTODIR/modules/prompt/functions/prompt_starship_setup
+
+export PATH="$HOME/.GIS-lm-build/bin:$PATH"
+eval "$(jenv init -)"
+
+if which nodenv > /dev/null; then eval "$(nodenv init -)"; fi
