@@ -19,17 +19,6 @@ precmd () {
   echo -ne "$window_title"
 }
 
-check-local-java() {
-  [[ -a .java-version ]] || return
-
-  if [[ -f .java-version && -r .java-version ]]; then
-    command printf "Now using local version of java: $(cat .java-version)\n"
-  fi
-}
-
-autoload -U add-zsh-hook
-add-zsh-hook chpwd check-local-java
-
 # load bashcompinit for some old bash completions
 autoload -Uz compinit && compinit
 autoload -U +X bashcompinit && bashcompinit
@@ -43,8 +32,7 @@ setopt hist_reduce_blanks # remove superfluous blanks from history items
 setopt inc_append_history # save history entries as soon as they are entered
 setopt share_history # share history between different instances of the shell
 
-export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init --path)"
 eval "$(pyenv init -)"
 
 # add prompt_starship_setup function to Prezto

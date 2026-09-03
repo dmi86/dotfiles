@@ -17,7 +17,8 @@ now owns that content directly.
 
 Key decisions (see SQA-3887 for full context):
 - Node version manager: **nodenv**, not NVM
-- One current **openjdk** version + **jenv**, kept only to compile remaining Selenium repos
+- **openjdk@17**, **openjdk@21** and **microsoft-openjdk@11** managed by **jenv**, kept to compile
+  remaining Selenium repos (jenv only earns its place with multiple JDKs installed)
 - **IntelliJ IDEA dropped** — VS Code is the primary editor
 - Of the open MAYBE tools: **leapp** and **pre-commit** kept, **direnv** and **dbx** dropped
 - **vim** and **starship** kept despite the original audit marking them DROP — both are actively
@@ -36,6 +37,9 @@ and reissue it at github.com/settings/tokens, and once the secrets backend (belo
 store its replacement there instead of in a shell file.
 
 ## Bootstrap
+
+Install [Homebrew](https://brew.sh) first, then `brew install chezmoi` — chezmoi itself comes from
+Homebrew, so there's no point bootstrapping Homebrew from inside a chezmoi script.
 
 ```sh
 chezmoi init --apply git@github.com:dmi86/dotfiles.git
@@ -66,8 +70,9 @@ can be archived or deleted.
 | Path | Purpose |
 |---|---|
 | `.chezmoi.toml.tmpl` | Generates `~/.config/chezmoi/chezmoi.toml`; prompts for git name/work email/signing key |
-| `.chezmoidata/packages.yaml` | Source of truth for Homebrew formulae/casks, pipx, npm globals, VS Code extensions |
-| `.chezmoiscripts/` | Bootstrap Homebrew + Prezto, install everything in `packages.yaml`, create `~/Develop` |
+| `.chezmoidata/packages.yaml` | Source of truth for Homebrew formulae/casks, npm globals, VS Code extensions |
+| `dot_pyenv/default-packages` | Python tools installed into every pyenv-managed version (via `pyenv-default-packages`) |
+| `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, create `~/Develop` |
 | `.chezmoiremove` | Declares `.vimrc` removed — not managed here |
 | `dot_gitconfig.tmpl` | Git config: identity, `hooksPath` (LM git-hooks), `gh`-backed credential helpers |
 | `dot_gitignore` | Global gitignore |

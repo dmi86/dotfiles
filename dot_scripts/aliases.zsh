@@ -6,7 +6,7 @@ alias glogn="git log --graph --format='format:%C(yellow)%h%C(reset) %C(blue)\"%a
 alias gds="gd --staged"
 
 alias -- -="cd -"
-alias cat='pygmentize -g'
+alias cat='bat -pp'
 
 # In order to use our lm-build tool
 unalias lm

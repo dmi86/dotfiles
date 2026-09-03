@@ -1,7 +1,6 @@
 # Source of truth for what gets installed. Edit here, not in the scripts.
 # Decisions locked in SQA-3887:
 #   - nodenv (not NVM) for Node version management
-#   - single current openjdk version + jenv (legacy Selenium repos still need to compile)
 #   - IntelliJ IDEA dropped entirely — VS Code is the primary editor
 #   - MAYBE list resolved: leapp and pre-commit KEPT, direnv and dbx DROPPED
 #   - vim and starship KEPT despite the original audit marking them DROP —
@@ -9,6 +8,11 @@
 #     and are unrelated to the Selenium/Java toolchain that was actually
 #     being retired
 #   - fasd DROPPED — removed from Homebrew core, no longer installable
+# PR review (ribugent):
+#   - jenv needs real JDKs to manage: openjdk@17, openjdk@21 and
+#     microsoft-openjdk@11 rather than a single generic openjdk
+#   - prefer Homebrew over npm/pipx globals so updates are handled in one place
+#   - python tooling moved to pyenv default-packages (see dot_pyenv/default-packages)
 brew:
   formulae:
     - git
@@ -21,14 +25,19 @@ brew:
     - awscli
     - ripgrep
     - jenv
-    - openjdk
+    - openjdk@17
+    - openjdk@21
     - pyenv
-    - pipx
+    # installs dot_pyenv/default-packages into every pyenv-managed python
+    - btrachey/pyenv/pyenv-default-packages
     - pre-commit
     - databricks
     - vim
     - starship
+    - bat
     - pygments
+    - skills
+    - npm-check-updates
     # AWS SSM Session Manager plugin ships as a Homebrew cask, not an npm
     # package — moved here from the npm list in the original tooling audit.
   casks:
@@ -42,19 +51,13 @@ brew:
     - twingate
     - leapp
     - session-manager-plugin
-
-pipx:
-  # CLI-invoked, not IDE-integrated — Claude Code runs these itself to lint/format
-  - pylint
-  - autopep8
+    - microsoft-openjdk@11
+    - claude-code
 
 npmGlobal:
-  - "@anthropic-ai/claude-code"
+  # Everything else moved to Homebrew. gemini-cli stays on npm because the
+  # Homebrew formula is deprecated upstream and gets disabled on 2026-12-18.
   - "@google/gemini-cli"
-  - mcp-remote
-  - skills
-  - eslint
-  - npm-check-updates
 
 vscodeExtensions:
   - amazonwebservices.aws-toolkit-vscode
