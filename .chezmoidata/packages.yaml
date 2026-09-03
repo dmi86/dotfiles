@@ -1,0 +1,64 @@
+# Source of truth for what gets installed. Edit here, not in the scripts.
+# Decisions locked in SQA-3887:
+#   - nodenv (not NVM) for Node version management
+#   - single current openjdk version + jenv (legacy Selenium repos still need to compile)
+#   - IntelliJ IDEA dropped entirely — VS Code is the primary editor
+#   - MAYBE list resolved: leapp and pre-commit KEPT, direnv and dbx DROPPED
+#   - vim and starship KEPT despite the original audit marking them DROP —
+#     both are actively used today (starship = prompt theme, vim = $EDITOR)
+#     and are unrelated to the Selenium/Java toolchain that was actually
+#     being retired
+#   - fasd DROPPED — removed from Homebrew core, no longer installable
+brew:
+  formulae:
+    - git
+    - gh
+    - gnupg
+    - pinentry-mac
+    - coreutils
+    - nodenv
+    - yarn
+    - awscli
+    - ripgrep
+    - jenv
+    - openjdk
+    - pyenv
+    - pipx
+    - pre-commit
+    - databricks
+    - vim
+    - starship
+    - pygments
+    # AWS SSM Session Manager plugin ships as a Homebrew cask, not an npm
+    # package — moved here from the npm list in the original tooling audit.
+  casks:
+    - google-chrome
+    - firefox
+    - visual-studio-code
+    - iterm2
+    - postman
+    - slack
+    - zoom
+    - twingate
+    - leapp
+    - session-manager-plugin
+
+pipx:
+  # CLI-invoked, not IDE-integrated — Claude Code runs these itself to lint/format
+  - pylint
+  - autopep8
+
+npmGlobal:
+  - "@anthropic-ai/claude-code"
+  - "@google/gemini-cli"
+  - mcp-remote
+  - skills
+  - eslint
+  - npm-check-updates
+
+vscodeExtensions:
+  - amazonwebservices.aws-toolkit-vscode
+  - anthropic.claude-code
+  - ms-python.python
+  - ms-python.vscode-pylance
+  - paiqo.databricks-vscode

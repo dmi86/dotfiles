@@ -1,0 +1,32 @@
+#!/bin/bash
+set -euo pipefail
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Package list hash, so this script re-runs whenever .chezmoidata/packages.yaml changes:
+# {{ include ".chezmoidata/packages.yaml" | sha256sum }}
+
+echo "==> Homebrew formulae"
+{{ range .brew.formulae }}
+brew list {{ . }} >/dev/null 2>&1 || brew install {{ . }}
+{{ end }}
+
+echo "==> Homebrew casks"
+{{ range .brew.casks }}
+brew list --cask {{ . }} >/dev/null 2>&1 || brew install --cask {{ . }}
+{{ end }}
+
+echo "==> pipx-managed CLI tools"
+{{ range .pipx }}
+pipx install --force {{ . }}
+{{ end }}
+
+echo "==> npm global packages"
+{{ range .npmGlobal }}
+npm install -g {{ . }}
+{{ end }}
+
+echo "==> VS Code extensions"
+{{ range .vscodeExtensions }}
+code --install-extension {{ . }} --force
+{{ end }}
