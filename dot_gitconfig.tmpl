@@ -1,0 +1,36 @@
+[user]
+    name = {{ .git.name }}
+    email = {{ .git.work.email }}
+{{- if .git.work.signkey }}
+    signingkey = {{ .git.work.signkey }}
+{{- end }}
+
+[push]
+    default = simple
+
+[core]
+    editor = vim
+    excludesfile = ~/.gitignore
+    hooksPath = {{ .chezmoi.homeDir }}/.GIS-lm-build/git-hooks
+
+[merge]
+    ff = false
+
+[pull]
+    rebase = merges
+
+[commit]
+    gpgsign = true
+    verbose = true
+
+[gpg]
+    program = gpg
+
+[init]
+    defaultBranch = main
+
+[credential "https://github.com"]
+    helper = !/opt/homebrew/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+    helper = !/opt/homebrew/bin/gh auth git-credential

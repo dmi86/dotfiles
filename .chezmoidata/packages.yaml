@@ -1,0 +1,64 @@
+# Source of truth for what gets installed. Edit here, not in the scripts.
+# Decisions locked in SQA-3887:
+#   - nodenv (not NVM) for Node version management
+#   - IntelliJ IDEA dropped entirely — VS Code is the primary editor
+#   - MAYBE list resolved: leapp and pre-commit KEPT, direnv and dbx DROPPED
+#   - vim and starship KEPT despite the original audit marking them DROP —
+#     both are actively used today (starship = prompt theme, vim = $EDITOR)
+#     and are unrelated to the Selenium/Java toolchain that was actually
+#     being retired
+#   - fasd DROPPED — removed from Homebrew core, no longer installable
+# PR review (ribugent):
+#   - jenv needs real JDKs to manage: openjdk@17, openjdk@21 and
+#     microsoft-openjdk@11 rather than a single generic openjdk
+#   - prefer Homebrew over npm/pipx globals so updates are handled in one place
+#   - python tooling moved to pyenv default-packages (see dot_pyenv/default-packages)
+brew:
+  formulae:
+    - git
+    - gh
+    - gnupg
+    - pinentry-mac
+    - coreutils
+    - nodenv
+    - yarn
+    - awscli
+    - ripgrep
+    - jenv
+    - openjdk@17
+    - openjdk@21
+    - pyenv
+    # installs dot_pyenv/default-packages into every pyenv-managed python
+    - btrachey/pyenv/pyenv-default-packages
+    - pre-commit
+    - databricks
+    - vim
+    - starship
+    - bat
+    - skills
+    - npm-check-updates
+    # AWS SSM Session Manager plugin ships as a Homebrew cask, not an npm
+    # package — moved here from the npm list in the original tooling audit.
+  casks:
+    - google-chrome
+    - firefox
+    - visual-studio-code
+    - iterm2
+    - postman
+    - slack
+    - zoom
+    - twingate
+    - leapp
+    - session-manager-plugin
+    - microsoft-openjdk@11
+    - claude-code
+    # Homebrew's designated replacement for the deprecated gemini-cli formula.
+    # Note it provides `antigravity` (aliased `agy`), not `gemini`.
+    - antigravity-cli
+
+vscodeExtensions:
+  - amazonwebservices.aws-toolkit-vscode
+  - anthropic.claude-code
+  - ms-python.python
+  - ms-python.vscode-pylance
+  - paiqo.databricks-vscode
