@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+
+# Re-run whenever the Leapp data or the bootstrap script changes:
+# data:   {{ include ".chezmoidata/leapp.yaml" | sha256sum }}
+# script: {{ include "dot_local/bin/executable_leapp-bootstrap.tmpl" | sha256sum }}
+
+BOOTSTRAP="{{ .chezmoi.homeDir }}/.local/bin/leapp-bootstrap"
+
+if [ ! -x "$BOOTSTRAP" ]; then
+  echo "==> leapp-bootstrap not present yet, skipping" >&2
+  exit 0
+fi
+
+# No --login here: the SSO login opens a browser and must not block an apply.
+# Everything that can be done offline is done; the script says what is left.
+"$BOOTSTRAP"

@@ -2,7 +2,7 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
-export PATH=.:~/bin:~/.local/bin:~/Library/Python/3.11/bin:$PATH
+export PATH=.:~/bin:~/.local/bin:$PATH
 export EDITOR="vim"
 
 # If no GPG Suite https://help.github.com/articles/telling-git-about-your-gpg-key/
@@ -44,3 +44,18 @@ export PATH="$HOME/.GIS-lm-build/bin:$PATH"
 eval "$(jenv init -)"
 
 if which nodenv > /dev/null; then eval "$(nodenv init -)"; fi
+
+# bat - syntax-highlighted pager, themed to match iTerm's Solarized Dark
+export BAT_THEME="Solarized (dark)"
+
+# fzf - Ctrl-R history search, Ctrl-T file picker, Alt-C directory jump.
+# Must come after the Prezto init above so it wins the Ctrl-R binding.
+if command -v fzf > /dev/null; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+  export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+  export FZF_CTRL_T_OPTS="--preview 'bat -n --color=always --line-range :200 {}'"
+  export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --icons=auto --color=always {}'"
+  eval "$(fzf --zsh)"
+fi

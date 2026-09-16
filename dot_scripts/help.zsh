@@ -6,11 +6,22 @@ function help-dotfiles {
   echo "Showing general dotfiles help"
   echo "-----------------------------\n"
 
-  help-print "z [WRITE+TAB]" "Use it to switch between folders, it autocompletes paths"
   help-print ".." "Instead of cd .."
   help-print "-" "Goes back to the previous folder"
   help-print "help-[TAB]" "Displays other available helps"
   help-print "fixSound" "Fixes an issue with OSX when the sound does not work"
+
+  echo "\nListing and searching"
+  echo "---------------------\n"
+
+  help-print "ls / ll / la" "eza with icons and git status (la includes dotfiles)"
+  help-print "lt" "Tree view, two levels deep"
+  help-print "cat FILE" "bat - syntax-highlighted, paged"
+  help-print "CTRL-R" "fzf fuzzy search through shell history"
+  help-print "CTRL-T" "fzf file picker, with a bat preview"
+  help-print "ALT-C" "fzf directory jump, with a tree preview"
+  help-print "fd PATTERN" "Find files by name, respecting .gitignore"
+  help-print "btop" "Process and resource viewer"
 }
 
 function help-git {

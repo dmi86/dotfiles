@@ -1,0 +1,132 @@
+#!/bin/bash
+# leapp-bootstrap — replay the Leapp local configuration declared in
+# .chezmoidata/leapp.yaml. Managed by chezmoi; edit the data file, not this.
+#
+# Leapp's own store (~/.Leapp/Leapp-lock.json) is openssl-encrypted with a
+# machine-local Keychain secret, so it cannot be checked in. Instead this
+# script drives the `leapp` CLI to recreate the parts that are ours: the AWS
+# SSO integration, the AWS named profiles, and each session's profile/region
+# pinning. The session list itself comes from AWS SSO via `integration sync`.
+#
+# Safe to re-run: every step is skipped when already in the desired state.
+#
+# Usage:
+#   leapp-bootstrap            configure, and sync if already logged in
+#   leapp-bootstrap --login    additionally open the SSO browser login
+set -euo pipefail
+
+DO_LOGIN=0
+[ "${1:-}" = "--login" ] && DO_LOGIN=1
+
+if ! command -v leapp >/dev/null 2>&1; then
+  echo "leapp-bootstrap: leapp CLI not found, skipping (brew install leapp-cli)" >&2
+  exit 0
+fi
+
+INTEGRATION_ALIAS={{ .leapp.integration.alias | quote }}
+INTEGRATION_TYPE={{ .leapp.integration.type | quote }}
+INTEGRATION_PORTAL={{ .leapp.integration.portalUrl | quote }}
+INTEGRATION_REGION={{ .leapp.integration.region | quote }}
+DEFAULT_REGION={{ .leapp.defaultRegion | quote }}
+
+# Leapp needs its workspace to exist; it is created the first time the desktop
+# app runs. Fail soft so `chezmoi apply` on a fresh machine still succeeds.
+if ! leapp workspace >/dev/null 2>&1; then
+  echo "leapp-bootstrap: no Leapp workspace yet — open Leapp.app once, then re-run" >&2
+  exit 0
+fi
+
+# ID,Type,Integration Name,Portal URL,Region,Status,Expiration
+integration_field() {
+  leapp integration list -x --output=csv --no-header 2>/dev/null |
+    awk -F, -v alias="$INTEGRATION_ALIAS" -v col="$1" '$3 == alias { print $col; exit }'
+}
+
+echo "==> Leapp integration"
+integration_id=$(integration_field 1)
+if [ -z "$integration_id" ]; then
+  echo "    creating '$INTEGRATION_ALIAS'"
+  leapp integration create \
+    --integrationType "$INTEGRATION_TYPE" \
+    --integrationAlias "$INTEGRATION_ALIAS" \
+    --integrationPortalUrl "$INTEGRATION_PORTAL" \
+    --integrationRegion "$INTEGRATION_REGION"
+  integration_id=$(integration_field 1)
+else
+  echo "    '$INTEGRATION_ALIAS' already present"
+fi
+
+echo "==> Default region"
+if [ "$(leapp region get-default 2>/dev/null)" != "$DEFAULT_REGION" ]; then
+  leapp region set-default --region "$DEFAULT_REGION"
+fi
+
+echo "==> AWS named profiles"
+existing_profiles=$(leapp profile list --output=csv --no-header 2>/dev/null || true)
+while IFS= read -r profile; do
+  [ -n "$profile" ] || continue
+  if ! printf '%s\n' "$existing_profiles" | grep -qxF "$profile"; then
+    echo "    creating $profile"
+    leapp profile create --profileName "$profile" </dev/null
+  fi
+done <<'PROFILES'
+{{ range .leapp.sessions }}{{ .profile }}
+{{ end }}{{ range .leapp.extraProfiles }}{{ . }}
+{{ end }}
+PROFILES
+
+# Sessions only exist once the integration has been logged into and synced.
+# The login opens a browser, so it is opt-in rather than part of every apply.
+if [ "$(integration_field 6)" != "Online" ]; then
+  if [ "$DO_LOGIN" = 1 ]; then
+    echo "==> SSO login (a browser window will open)"
+    leapp integration login --integrationId "$integration_id"
+  else
+    echo "==> Integration is offline — session mapping skipped."
+    echo "    Run 'leapp-bootstrap --login' to authenticate and finish."
+    exit 0
+  fi
+fi
+
+echo "==> Syncing sessions from AWS SSO"
+leapp integration sync --integrationId "$integration_id"
+
+echo "==> Session profiles and regions"
+# ID,Session Name,Role,Type,Named Profile,Region/Location,Status
+sessions=$(leapp session list -x --output=csv --no-header 2>/dev/null || true)
+profiles=$(leapp profile list -x --output=csv --no-header 2>/dev/null || true)
+
+session_field() {
+  printf '%s\n' "$sessions" | awk -F, -v n="$1" -v col="$2" '$2 == n { print $col; exit }'
+}
+
+apply_session() {
+  local name="$1" want_profile="$2" want_region="$3"
+  local session_id profile_id
+
+  session_id=$(session_field "$name" 1)
+  if [ -z "$session_id" ]; then
+    echo "    ! no session named '$name' — not assigned to this user in AWS SSO?"
+    return 0
+  fi
+
+  if [ "$(session_field "$name" 5)" != "$want_profile" ]; then
+    profile_id=$(printf '%s\n' "$profiles" | awk -F, -v p="$want_profile" '$2 == p { print $1; exit }')
+    if [ -z "$profile_id" ]; then
+      echo "    ! profile '$want_profile' missing, skipping '$name'"
+      return 0
+    fi
+    echo "    $name -> $want_profile"
+    leapp session change-profile --sessionId "$session_id" --profileId "$profile_id"
+  fi
+
+  if [ "$(session_field "$name" 6)" != "$want_region" ]; then
+    echo "    $name -> $want_region"
+    leapp session change-region --sessionId "$session_id" --region "$want_region"
+  fi
+}
+{{ range .leapp.sessions }}
+apply_session {{ .name | quote }} {{ .profile | quote }} {{ .region | quote }}
+{{- end }}
+
+echo "==> Done"

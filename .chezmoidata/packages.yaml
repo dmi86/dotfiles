@@ -8,7 +8,7 @@
 #     and are unrelated to the Selenium/Java toolchain that was actually
 #     being retired
 #   - fasd DROPPED — removed from Homebrew core, no longer installable
-# PR review (ribugent):
+# From PR review:
 #   - jenv needs real JDKs to manage: openjdk@17, openjdk@21 and
 #     microsoft-openjdk@11 rather than a single generic openjdk
 #   - prefer Homebrew over npm/pipx globals so updates are handled in one place
@@ -34,7 +34,29 @@ brew:
     - databricks
     - vim
     - starship
+    # Terminal legibility set (see dot_scripts/aliases.zsh.tmpl and dot_zshrc):
+    #   eza       -> `ls`/`ll`/`la`/`lt` with icons, colours and git status
+    #   bat       -> the `cat` alias and fzf's file preview
+    #   git-delta -> git's pager, wired up in dot_gitconfig.tmpl
+    #   fzf + fd  -> Ctrl-R / Ctrl-T / Alt-C pickers, fd is fzf's file source
+    #   btop      -> process/resource viewer
+    - eza
     - bat
+    - git-delta
+    - fzf
+    - fd
+    - btop
+    # jq is a hard dependency of pr_stats/pr_stats_full in dot_scripts/functions.zsh
+    - jq
+    # `leapp` CLI, driven by dot_local/bin/leapp-bootstrap. The `leapp` cask
+    # below is the desktop app and does NOT ship the CLI.
+    # One-time cleanup needed on this machine: the CLI is currently an npm
+    # global (`@noovolari/leapp-cli`), which owns /opt/homebrew/bin/leapp and
+    # will make `brew install leapp-cli` fail to link. Run
+    #   npm uninstall -g @noovolari/leapp-cli
+    # before the first apply. Homebrew is preferred here per the PR review
+    # note above (one place for updates).
+    - leapp-cli
     - skills
     - npm-check-updates
     # AWS SSM Session Manager plugin ships as a Homebrew cask, not an npm
@@ -44,6 +66,9 @@ brew:
     - firefox
     - visual-studio-code
     - iterm2
+    # Nerd Font — supplies the glyphs eza --icons and starship draw; iTerm2 is
+    # configured to use MesloLGSNF-Regular. Without it both render as tofu.
+    - font-meslo-lg-nerd-font
     - postman
     - slack
     - zoom

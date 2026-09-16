@@ -1,1 +1,8 @@
 .DS_Store
+
+# iTerm2 preferences are deliberately untracked — the profiles embed internal
+# host references (bound hosts, an ssh command to an internal address,
+# hostname-trigger regexes for internal subnets). See "Deliberately not
+# managed here" in the README. Ignored rather than merely undocumented so a
+# `git add -A` cannot commit them by accident.
+dot_config/iterm2/

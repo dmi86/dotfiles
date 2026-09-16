@@ -8,6 +8,13 @@ alias gds="gd --staged"
 alias -- -="cd -"
 alias cat="bat -p --paging always"
 
+# eza - ls with icons, colours and inline git status. Icons need a Nerd Font
+# (font-meslo-lg-nerd-font); --icons=auto keeps them out of piped output.
+alias ls='eza --icons=auto --group-directories-first'
+alias ll='eza -l  --icons=auto --group-directories-first --git'
+alias la='eza -la --icons=auto --group-directories-first --git'
+alias lt='eza --tree --level=2 --icons=auto'
+
 # In order to use our lm-build tool
 unalias lm
 
@@ -37,11 +44,12 @@ gbranch() {
         fi
     fi
 
+    # Handle comes from chezmoi's git.handle prompt — see .chezmoi.toml.tmpl
     if test "$1"; then
-        name='david'_$1
+        name={{ .git.handle | quote }}_$1
         name="${name// /_}"
     else
-        name='david'
+        name={{ .git.handle | quote }}
     fi
 
     today=$(gdate +"%Y%m%d")
