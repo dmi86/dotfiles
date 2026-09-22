@@ -1,0 +1,99 @@
+# Leapp AWS SSO configuration.
+#
+# Sessions are deliberately NOT stored here. Two reasons:
+#
+#   1. ~/.Leapp/Leapp-lock.json is openssl-encrypted with a machine-local
+#      secret held in the macOS Keychain, so it can neither be committed nor
+#      decrypted on another machine.
+#   2. Every session below is *generated* by Leapp when it syncs the AWS SSO
+#      integration — the account/role list is owned by AWS SSO, not by us.
+#
+# What is not reproduced by a sync, and therefore lives here, is the local
+# metadata: the integration itself, the AWS named profile each session is
+# pinned to, and the per-session region. `leapp-bootstrap` replays it.
+#
+# Refresh this file from a machine that is already set up with:
+#   leapp session list --output=csv --columns="Session Name,Named Profile,Region/Location"
+leapp:
+  # Applied to new sessions that the mapping below does not cover.
+  defaultRegion: eu-west-1
+
+  integration:
+    type: AWS-SSO
+    alias: AWS SSO Global
+    portalUrl: https://launchmetrics.awsapps.com/start/
+    region: eu-west-1
+
+  # Named profiles that exist in Leapp but have no session of their own,
+  # because those SSO accounts are not assigned to everyone. Kept because
+  # ~/.aws/config and the AWS VS Code toolkit still reference them; they are
+  # harmless extra entries for anyone whose access does not include them.
+  extraProfiles:
+    - insightsmetrics-preprod
+    - insightsmetrics-prod
+    - insightsmetrics-staging
+
+  # Session name -> AWS named profile + region. `default` is what Leapp's SSO
+  # sync assigns to every session, so without this mapping every account would
+  # collide on one profile.
+  sessions:
+    - name: Launchmetrics - Atlas - Prod
+      profile: atlas-prod
+      region: eu-west-1
+    - name: Launchmetrics - Atlas - Staging
+      profile: atlas-staging
+      region: eu-west-1
+    - name: Launchmetrics - Auth - Staging
+      profile: auth
+      region: eu-west-1
+    - name: Launchmetrics - BPC - Prod
+      profile: bpc-prod
+      region: us-east-1
+    - name: Launchmetrics - BPC - Staging
+      profile: bpc-staging
+      region: us-east-1
+    - name: Launchmetrics - Content Hub - Prod
+      profile: contenthub-prod
+      region: eu-west-1
+    - name: Launchmetrics - Content Hub - Staging
+      profile: contenthub-staging
+      region: eu-west-1
+    - name: Launchmetrics - Data Intelligence - Staging
+      profile: dataintelligence-staging
+      region: eu-west-1
+    - name: Launchmetrics - Data Platform - Preprod
+      profile: dataplatform-preprod
+      region: eu-west-1
+    - name: Launchmetrics - Data Platform - Prod
+      profile: dataplatform
+      region: eu-west-1
+    - name: Launchmetrics - Data Platform - Staging
+      profile: dataplatform-staging
+      region: eu-west-1
+    - name: Launchmetrics - Discover - Staging
+      profile: discover-staging
+      region: eu-west-1
+    - name: Launchmetrics - Dmr - Staging
+      profile: dmr-staging
+      region: eu-west-1
+    - name: Launchmetrics - L2M - Staging
+      profile: fashiongps-staging
+      region: us-east-1
+    - name: Launchmetrics - L2M
+      profile: fashiongps
+      region: us-east-1
+    - name: Launchmetrics - Labs
+      profile: labs
+      region: eu-west-1
+    - name: Launchmetrics - Main
+      profile: augure
+      region: eu-west-1
+    - name: Launchmetrics - Visual Content - Prod
+      profile: visualcontent-prod
+      region: us-east-1
+    - name: Launchmetrics - Visual Content - Staging
+      profile: visualcontent-staging
+      region: us-east-1
+    - name: Launchmetrics - Voices - Staging
+      profile: voices-staging
+      region: eu-west-1

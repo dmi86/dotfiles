@@ -1,6 +1,13 @@
+# Per-machine identity. `chezmoi init` prompts for these once and stores the
+# answers in ~/.config/chezmoi/chezmoi.toml; they are never committed.
+# No defaults are pre-filled on purpose — a teammate running `chezmoi init`
+# should have to supply their own identity, not inherit someone else's.
 [data.git]
-    name = {{ promptStringOnce . "git.name" "Git name" "David Muñoz Ibañez" | quote }}
+    name = {{ promptStringOnce . "git.name" "Full name for git commits" | quote }}
+    # Short lower-case handle used to build branch names in gbranch() —
+    # e.g. "jdoe" produces m-jdoe_20260916_a1b2c3d_04217
+    handle = {{ promptStringOnce . "git.handle" "Short handle for branch names (e.g. jdoe)" | quote }}
 
 [data.git.work]
-    email = {{ promptStringOnce . "git.work.email" "Work git email" "david.munoz@launchmetrics.com" | quote }}
-    signkey = {{ promptStringOnce . "git.work.signkey" "Work GPG signing key" "" | quote }}
+    email = {{ promptStringOnce . "git.work.email" "Work git email" | quote }}
+    signkey = {{ promptStringOnce . "git.work.signkey" "Work GPG signing key (blank to skip commit signing)" | quote }}

@@ -1,0 +1,10 @@
+{{/* The bootstrap script embedded verbatim, rather than invoked from
+     ~/.local/bin — there is nothing for a wrapper to add, and because
+     run_onchange_ keys off the rendered content, editing either the script or
+     .chezmoidata/leapp.yaml re-runs this on its own, with no sha256sum marker
+     to keep in sync.
+
+     Run with no arguments, so DO_LOGIN stays 0: the SSO login opens a browser
+     and must not block an apply. Everything that can be done offline is done
+     here; the output says what is left (leapp-bootstrap --login). */ -}}
+{{ includeTemplate "leapp-bootstrap.sh" . }}

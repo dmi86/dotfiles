@@ -11,10 +11,23 @@
 [core]
     editor = vim
     excludesfile = ~/.gitignore
+    pager = delta
     hooksPath = {{ .chezmoi.homeDir }}/.GIS-lm-build/git-hooks
 
 [merge]
     ff = false
+    conflictstyle = zdiff3
+
+[interactive]
+    diffFilter = delta --color-only
+
+# git-delta - side-by-side diffs with line numbers and syntax highlighting,
+# themed to match iTerm/bat. `navigate` adds n/N jumps between files.
+[delta]
+    navigate = true
+    line-numbers = true
+    side-by-side = true
+    syntax-theme = Solarized (dark)
 
 [pull]
     rebase = merges
