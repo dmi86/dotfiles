@@ -39,15 +39,20 @@ brew:
     #   bat       -> the `cat` alias and fzf's file preview
     #   git-delta -> git's pager, wired up in dot_gitconfig.tmpl
     #   fzf + fd  -> Ctrl-R / Ctrl-T / Alt-C pickers, fd is fzf's file source
-    #   btop      -> process/resource viewer
+    #   btop      -> resource dashboard
+    #   htop      -> process management (kill/renice); btop's TUI is a poor fit
+    #                for it, per PR review, so both are installed
     - eza
     - bat
     - git-delta
     - fzf
     - fd
     - btop
+    - htop
     # jq is a hard dependency of pr_stats/pr_stats_full in dot_scripts/functions.zsh
     - jq
+    # yq is required by the lm-build integration (PR review)
+    - yq
     # `leapp` CLI, driven by dot_local/bin/leapp-bootstrap. The `leapp` cask
     # below is the desktop app and does NOT ship the CLI.
     # One-time cleanup needed on this machine: the CLI is currently an npm

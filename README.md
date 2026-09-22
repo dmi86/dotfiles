@@ -32,8 +32,10 @@ adding a line there is all that is needed.
 | | `git-delta` | Git's pager and `diffFilter`, wired up in `dot_gitconfig.tmpl` |
 | | `fzf` | Ctrl-R history search, Ctrl-T file picker, Alt-C directory jump |
 | | `fd` | Fast file finder; also fzf's file/directory source |
-| | `btop` | Process and resource viewer |
+| | `btop` | Resource dashboard (CPU/memory/disk/network) |
+| | `htop` | Process management — killing and renicing, which `btop`'s TUI handles poorly |
 | | `jq` | JSON processor — required by `pr_stats` in `dot_scripts/functions.zsh` |
+| | `yq` | YAML processor — required by the `lm-build` integration |
 | | `ripgrep` | Recursive search |
 | | `coreutils` | GNU utilities — `gbranch()` needs `gdate` |
 | Git | `git` | Version control |
@@ -130,7 +132,9 @@ Two things need a follow-up after the first apply:
 | `.chezmoidata/leapp.yaml` | Leapp AWS SSO integration, named profiles, and the session -> profile/region mapping |
 | `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, configure Leapp, create `~/Develop` |
 | `.chezmoiremove` | Declares `.vimrc` removed — not managed here |
-| `dot_local/bin/executable_leapp-bootstrap.tmpl` | Becomes `~/.local/bin/leapp-bootstrap`; replays `leapp.yaml` through the `leapp` CLI, safe to re-run |
+| `.chezmoiignore` | Excludes `README.md` from the apply; it is repo docs, not a dotfile |
+| `.chezmoitemplates/leapp-bootstrap.sh` | The Leapp bootstrap itself; replays `leapp.yaml` through the `leapp` CLI, safe to re-run. Embedded by both consumers below |
+| `dot_local/bin/executable_leapp-bootstrap.tmpl` | Becomes `~/.local/bin/leapp-bootstrap`, so the `--login` step can be run by hand |
 | `dot_pyenv/default-packages` | Python tools installed into every pyenv-managed version |
 | `dot_gitconfig.tmpl` | Identity, `hooksPath` (LM git-hooks), `gh`-backed credential helpers, delta as pager |
 | `dot_gitignore` | Global gitignore |
@@ -159,9 +163,11 @@ Partially automated. The split matters:
   sharing the `default` profile, which breaks every `aws --profile <name>` call and the AWS
   VS Code toolkit. That mapping lives in `.chezmoidata/leapp.yaml`.
 
-`chezmoi apply` runs `~/.local/bin/leapp-bootstrap`, which creates the integration, sets the
-default region, and creates the named profiles. Mapping sessions needs the integration online,
-and the SSO login opens a browser, so that step is opt-in:
+`chezmoi apply` runs the bootstrap script — `run_onchange_after_25-configure-leapp` embeds
+`.chezmoitemplates/leapp-bootstrap.sh` verbatim rather than shelling out to the installed copy —
+which creates the integration, sets the default region, and creates the named profiles. Mapping
+sessions needs the integration online, and the SSO login opens a browser, so that step is opt-in,
+using the same script installed as `~/.local/bin/leapp-bootstrap`:
 
 ```sh
 leapp-bootstrap --login

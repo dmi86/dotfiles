@@ -21,7 +21,8 @@ function help-dotfiles {
   help-print "CTRL-T" "fzf file picker, with a bat preview"
   help-print "ALT-C" "fzf directory jump, with a tree preview"
   help-print "fd PATTERN" "Find files by name, respecting .gitignore"
-  help-print "btop" "Process and resource viewer"
+  help-print "btop" "Resource dashboard - CPU, memory, disk, network"
+  help-print "htop" "Process list - use this one to kill or renice"
 }
 
 function help-git {
