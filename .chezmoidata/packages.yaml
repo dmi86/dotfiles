@@ -31,7 +31,8 @@ brew:
     # installs dot_pyenv/default-packages into every pyenv-managed python
     - btrachey/pyenv/pyenv-default-packages
     - pre-commit
-    - databricks
+    # Not in Homebrew core — `brew install databricks` fails without the tap
+    - databricks/tap/databricks
     - vim
     - starship
     # Terminal legibility set (see dot_scripts/aliases.zsh.tmpl and dot_zshrc):
@@ -63,6 +64,8 @@ brew:
     # note above (one place for updates).
     - leapp-cli
     - skills
+    # Builds the shared Dock in run_once_after_40-configure-dock (.chezmoidata/dock.yaml)
+    - dockutil
     - npm-check-updates
     # AWS SSM Session Manager plugin ships as a Homebrew cask, not an npm
     # package — moved here from the npm list in the original tooling audit.
@@ -77,11 +80,14 @@ brew:
     - postman
     - slack
     - zoom
+    - spotify
     - twingate
     - leapp
     - session-manager-plugin
     - microsoft-openjdk@11
     - claude-code
+    # Desktop app, pinned in the Dock. claude-code above is the CLI only.
+    - claude
     # Homebrew's designated replacement for the deprecated gemini-cli formula.
     # Note it provides `antigravity` (aliased `agy`), not `gemini`.
     - antigravity-cli

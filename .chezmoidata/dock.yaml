@@ -1,0 +1,29 @@
+# Shared Dock layout, applied once per machine — after every app below is
+# installed — by .chezmoiscripts/run_after_40-configure-dock.sh.tmpl (SQA-3939).
+# Editing this does not touch machines already set up; it only shapes new ones.
+# Every app here must be installed by packages.yaml or come with the Mac.
+dock:
+  # Left to right. The Dock waits until all of these are installed.
+  apps:
+    - /Applications/iTerm.app
+    - /Applications/Visual Studio Code.app
+    - /Applications/Google Chrome.app
+    - /Applications/1Password.app # preinstalled, not a cask
+    - /Applications/Slack.app
+    - /Applications/zoom.us.app
+    - /Applications/Leapp.app
+    - /Applications/Claude.app
+    - /Applications/Spotify.app
+  # Right-hand side. Downloads as a stack, sorted by date added, fan view.
+  downloadsStack: true
+  settings:
+    orientation: bottom
+    autohide: true
+    tilesize: 61
+    magnification: false
+    show-recents: false
+    # Do not reorder Spaces by most recent use
+    mru-spaces: false
+    # Bottom-right hot corner: 4 = Desktop (macOS default is 14, Quick Note)
+    wvous-br-corner: 4
+    wvous-br-modifier: 0

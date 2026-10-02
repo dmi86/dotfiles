@@ -1,0 +1,57 @@
+#!/bin/bash
+# Lay out the Dock from .chezmoidata/dock.yaml — edit the data file, not this.
+#
+# Applied exactly once per machine, and only once every pinned app is
+# installed. Not run_once_: chezmoi keys that on the script's content, so any
+# later edit to dock.yaml would reset everyone's Dock again. Instead this runs
+# on every apply (run_after_, so after run_20-install-packages) and a marker
+# file records that the Dock was set up:
+#   - marker present            -> nothing to do, your Dock is yours
+#   - a pinned app still missing -> wait, the next chezmoi apply tries again
+#   - all apps present          -> lay out the Dock, write the marker
+# DOTFILES_DOCK_FORCE=1 chezmoi apply  lays it out now, skipping missing apps.
+set -uo pipefail
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+MARKER="$HOME/.local/state/dotfiles/dock-configured"
+[ -e "$MARKER" ] && exit 0
+
+if ! command -v dockutil >/dev/null 2>&1; then
+  echo "dock: dockutil not installed yet, the next chezmoi apply sets up the Dock" >&2
+  exit 0
+fi
+
+apps=(
+{{- range .dock.apps }}
+  {{ . | quote }}
+{{- end }}
+)
+
+missing=""
+for app in "${apps[@]}"; do
+  [ -d "$app" ] || missing+=" $(basename "$app" .app)"
+done
+if [ -n "$missing" ] && [ "${DOTFILES_DOCK_FORCE:-0}" != 1 ]; then
+  echo "dock: waiting for${missing} — the next chezmoi apply sets up the Dock" >&2
+  echo "      (or DOTFILES_DOCK_FORCE=1 chezmoi apply to set it up without them)" >&2
+  exit 0
+fi
+
+echo "==> Dock"
+dockutil --remove all --no-restart >/dev/null
+for app in "${apps[@]}"; do
+  [ -d "$app" ] && dockutil --add "$app" --no-restart >/dev/null
+done
+{{- if .dock.downloadsStack }}
+dockutil --add "$HOME/Downloads" --section others --display stack --view fan --sort dateadded --no-restart >/dev/null
+{{- end }}
+{{ range $key, $value := .dock.settings }}
+defaults write com.apple.dock {{ $key }} {{ if kindIs "bool" $value }}-bool{{ else if kindIs "string" $value }}-string{{ else }}-int{{ end }} {{ $value | toString | quote }}
+{{- end }}
+
+killall Dock
+
+mkdir -p "$(dirname "$MARKER")" && date >"$MARKER"
+echo "    done — applied once; delete $MARKER to apply the shared layout again"
+exit 0

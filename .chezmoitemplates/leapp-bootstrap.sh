@@ -35,8 +35,10 @@ DEFAULT_REGION={{ .leapp.defaultRegion | quote }}
 
 # Leapp needs its workspace to exist; it is created the first time the desktop
 # app runs. Fail soft so `chezmoi apply` on a fresh machine still succeeds.
+# Exiting 0 records this run_onchange_ script as done, so a later `chezmoi
+# apply` will NOT retry it — the message must point at the installed copy.
 if ! leapp workspace >/dev/null 2>&1; then
-  echo "leapp-bootstrap: no Leapp workspace yet — open Leapp.app once, then re-run" >&2
+  echo "leapp-bootstrap: no Leapp workspace yet — open Leapp.app once, then run 'leapp-bootstrap' (chezmoi apply will not re-run this)" >&2
   exit 0
 fi
 

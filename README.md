@@ -6,7 +6,9 @@ prompts, so the same repo works for anyone on the team.
 
 Tracked work: [SQA-3887](https://launchmetrics.atlassian.net/browse/SQA-3887) (initial setup) ·
 [SQA-3901](https://launchmetrics.atlassian.net/browse/SQA-3901) (open follow-ups: secrets backend,
-unmanaged tooling, first real apply)
+unmanaged tooling, first real apply) ·
+[SQA-3939](https://launchmetrics.atlassian.net/browse/SQA-3939) (fixes from the first fresh-Mac
+install)
 
 ## This repo must stay private
 
@@ -19,13 +21,24 @@ the account inventory alone is enough that this repo should not be made public.
 ## What gets installed
 
 [`.chezmoidata/packages.yaml`](.chezmoidata/packages.yaml) is the source of truth — edit it, not
-the scripts. `run_onchange_20-install-packages` installs whatever is missing on every apply, so
-adding a line there is all that is needed.
+the scripts. `run_20-install-packages` runs on every `chezmoi apply` and handles each package on
+its own, so adding a line there is all that is needed:
+
+- **Missing** -> installed.
+- **Installed but outdated** -> upgraded. Casks that update themselves (Chrome, Slack, Claude…)
+  are left to their own updater, which is also what Homebrew does.
+- **Installed and current** -> skipped.
+- **Fails** -> recorded, and the rest carry on. The apply is never stopped by one package; a
+  summary at the end lists what was installed, upgraded, left alone or failed, and the next
+  apply retries the failures.
+
+Prezto (`git pull`) and GIS-lm-build (newer GitHub release) follow the same rule: installed when
+missing, updated when behind.
 
 | Group | Package | Purpose |
 |---|---|---|
 | Prompt & shell | `starship` | Prompt theme, configured in `dot_config/starship.toml` |
-| | Prezto | zsh framework — cloned by `run_once_before_15-install-prezto`, not by Homebrew |
+| | Prezto | zsh framework — cloned, and kept updated, by `run_before_15-install-prezto`, not by Homebrew |
 | | `vim` | `$EDITOR`. The binary only; vim config and plugins are out of scope |
 | Terminal legibility | `eza` | `ls`/`ll`/`la`/`lt` with icons, colours and inline git status |
 | | `bat` | Backs the `cat` alias and fzf's file preview |
@@ -48,21 +61,25 @@ adding a line there is all that is needed.
 | Python | `pyenv` | Python version manager |
 | | `btrachey/pyenv/pyenv-default-packages` | Tap formula; installs `dot_pyenv/default-packages` (`pylint`, `autopep8`) into every version |
 | Java | `jenv` | JDK version manager |
-| | `openjdk@17`, `openjdk@21`, `microsoft-openjdk@11` | The JDKs jenv manages; kept to compile the remaining Selenium repos |
+| | `openjdk@17`, `openjdk@21`, `microsoft-openjdk@11` | The JDKs jenv manages; kept to compile the remaining Selenium repos. Registered with jenv by `run_after_22-register-jdks`, so `jenv local <version>` works straight away |
 | AWS & data | `awscli` | AWS CLI |
 | | `leapp-cli` + `leapp` | AWS SSO session manager — CLI and desktop app are separate packages |
 | | `session-manager-plugin` | Lets the AWS CLI open SSM sessions to managed instances |
-| | `databricks` | Databricks CLI, configured by `private_dot_databrickscfg.tmpl` |
+| | `databricks/tap/databricks` | Databricks CLI, configured by `private_dot_databrickscfg.tmpl`. Not in Homebrew core, hence the tap |
 | Terminal & fonts | `iterm2` | Terminal |
 | | `font-meslo-lg-nerd-font` | The glyphs `eza --icons` and starship draw; without it both render as tofu |
 | Apps | `visual-studio-code` | Primary editor |
 | | `google-chrome`, `firefox` | Browsers |
 | | `postman` | API client |
 | | `slack`, `zoom` | Comms |
+| | `spotify` | Music — pinned in the shared Dock |
+| | `dockutil` | Builds the shared Dock from `.chezmoidata/dock.yaml` (see [Dock](#dock)) |
 | | `twingate` | Zero-trust network access |
 | AI tooling | `claude-code` | Claude Code CLI |
+| | `claude` | Claude desktop app |
 | | `antigravity-cli` | Antigravity agents — provides `antigravity` (aliased `agy`), not `gemini` |
 | | `skills` | Agent skills ecosystem ([skills.sh](https://skills.sh)) |
+| Launchmetrics | GIS-lm-build | The `lm` CLI and the git hooks `core.hooksPath` points at. Not a Homebrew package — `run_after_35-install-lm-build` downloads the latest GitHub release (see below) |
 | VS Code extensions | `aws-toolkit-vscode`, `claude-code`, `python`, `vscode-pylance`, `databricks-vscode` | Installed with `code --install-extension` |
 
 Key decisions worth knowing (see SQA-3887 for the full audit):
@@ -116,9 +133,37 @@ work/personal identity split — everything uses the work identity.
 already has a `.zshrc`, `.gitconfig`, or `.scripts`. It also *removes* `.vimrc`, declared in
 `.chezmoiremove`.
 
-Two things need a follow-up after the first apply:
+Apps you installed by hand before the first apply (Chrome and Slack are the usual ones) never
+stop the apply. When the installed version matches Homebrew's, Homebrew adopts it and updates it
+from then on. Otherwise it is left as is and keeps updating itself; to hand it over anyway, run
+`brew install --cask --force <name>`.
 
-- **Leapp** — finish the AWS SSO setup with `leapp-bootstrap --login` (see below).
+### After the first apply
+
+```sh
+exec zsh              # first apply only: pick up ~/.local/bin and lm on PATH
+
+# Leapp — open Leapp.app once so it creates its workspace, then:
+leapp-bootstrap --login
+
+# LM build — the release is in a private repo, so it installs on the apply after gh is logged in
+gh auth login
+chezmoi apply
+lm github-setup       # paste a GitHub session cookie, following the prompts
+lm jira-setup         # same, with a Jira session cookie
+```
+
+- **Leapp.** On a fresh machine the first apply ends with `no Leapp workspace yet`. Open
+  `Leapp.app` once, then run `leapp-bootstrap`, **not** `chezmoi apply` — the apply step is
+  `run_onchange_`, so it is skipped until its content changes. `--login` also opens the SSO
+  browser login and finishes the session mapping (see [Leapp / AWS SSO](#leapp--aws-sso)).
+- **LM build.** Until `gh auth login` has run, every apply prints `lm-build: not installed yet`
+  and carries on. After it, the next `chezmoi apply` installs it and prints `lm version -v`.
+  `lm install-hooks` is not needed: it only sets the global `core.hooksPath`, which
+  `dot_gitconfig.tmpl` already sets to the same path. `lm github-setup` and `lm jira-setup` stay
+  manual because each one needs a browser session cookie. Later applies keep lm on the latest
+release: the swap mirrors `lm update` (new folder in, then `lm post-update`), done with `gh`
+because `lm update` needs the token `lm github-setup` creates.
 - **Placeholder secrets** — `.npmrc` and `.databrickscfg` are written with `REPLACE_WITH_*`
   values. Fill in your own GitHub Packages token and Databricks host/token by hand; no real
   credential is ever committed to this repo.
@@ -129,8 +174,9 @@ Two things need a follow-up after the first apply:
 |---|---|
 | `.chezmoi.toml.tmpl` | Generates `~/.config/chezmoi/chezmoi.toml`; prompts for git name/work email/signing key |
 | `.chezmoidata/packages.yaml` | Source of truth for Homebrew formulae/casks and VS Code extensions |
+| `.chezmoidata/dock.yaml` | Shared Dock layout: pinned apps, Downloads stack, Dock settings |
 | `.chezmoidata/leapp.yaml` | Leapp AWS SSO integration, named profiles, and the session -> profile/region mapping |
-| `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, configure Leapp, create `~/Develop` |
+| `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, register the JDKs with jenv, configure Leapp, create `~/Develop`, install GIS-lm-build, lay out the Dock |
 | `.chezmoiremove` | Declares `.vimrc` removed — not managed here |
 | `.chezmoiignore` | Excludes `README.md` from the apply; it is repo docs, not a dotfile |
 | `.chezmoitemplates/leapp-bootstrap.sh` | The Leapp bootstrap itself; replays `leapp.yaml` through the `leapp` CLI, safe to re-run. Embedded by both consumers below |
@@ -181,12 +227,36 @@ list in `.chezmoidata/leapp.yaml` from:
 leapp session list --output=csv --columns="Session Name,Named Profile,Region/Location"
 ```
 
+## Dock
+
+`run_after_40-configure-dock` gives every new machine the same Dock, declared in
+[`.chezmoidata/dock.yaml`](.chezmoidata/dock.yaml):
+
+- **Pinned, left to right:** iTerm, Visual Studio Code, Google Chrome, 1Password, Slack, zoom,
+  Leapp, Claude, Spotify.
+- **Right-hand side:** Downloads as a stack, sorted by date added, fan view.
+- **Settings:** bottom, auto-hide on, icon size 61, no magnification, no recent apps, Spaces
+  not reordered by recent use, bottom-right hot corner shows the Desktop.
+
+It replaces the whole Dock, **once per machine, after every pinned app is installed**:
+
+- It runs after the package install on every apply, but does nothing until all the apps above
+  are in `/Applications` — until then it prints which ones it is waiting for.
+- Once it has laid out the Dock it writes `~/.local/state/dotfiles/dock-configured` and never
+  runs again. Whatever you change in your own Dock afterwards is kept, and so is a later edit
+  to `dock.yaml`: that only shapes machines set up after it. (Not `run_once_`: chezmoi keys
+  that on the script's content, so editing `dock.yaml` would reset every Dock again.)
+- `DOTFILES_DOCK_FORCE=1 chezmoi apply` lays it out now, without the apps still missing.
+  Delete the marker file to have the shared layout applied again.
+
 ## Still manual
 
 Not automatable, and not attempted:
 
 - Laptop language/region and Jamf enrollment.
-- VPN device authorization (Twingate) and 1Password account sign-in.
+- VPN device authorization — follow the Twingate wiki page.
+- 1Password account sign-in — follow the invite email; the app itself comes preinstalled.
+- `lm github-setup` and `lm jira-setup` — each needs a browser session cookie.
 - GPG/SSH private key generation, and creating the GitHub Packages token.
 - The AWS SSO browser login — everything around it is scripted, see above.
 - **iTerm2 preferences.** iTerm2 loads them from `~/.config/iterm2` via its "Load preferences

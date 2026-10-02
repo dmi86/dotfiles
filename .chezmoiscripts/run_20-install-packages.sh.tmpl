@@ -1,0 +1,110 @@
+#!/bin/bash
+# Install everything in .chezmoidata/packages.yaml and upgrade what is already
+# there. Edit the data file, not this.
+#
+# run_ (every apply), not run_onchange_: "upgrade to the latest" has to happen
+# on every apply, not only when the list changes, and anything that failed
+# last time is retried on the next one.
+#
+# Never aborts. Each package is handled on its own: already installed and
+# current -> skipped; installed but outdated -> upgraded; missing -> installed.
+# A failure is recorded and reported in the summary at the end while the rest
+# carry on, so one broken package cannot stop the apply.
+set -uo pipefail
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Space-separated lists rather than arrays: macOS ships bash 3.2, where an
+# empty array trips `set -u`.
+done_installed="" done_upgraded="" done_current="" done_outside="" done_failed=""
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+
+echo "==> Refreshing Homebrew"
+brew update --quiet >/dev/null 2>&1 || echo "    ! brew update failed, using the cached package index"
+
+# Snapshot once, instead of a brew call per package. Casks that update
+# themselves (auto_updates: Chrome, Slack, Claude, ...) are not listed as
+# outdated by Homebrew; their own updater keeps them current.
+installed_formulae=" $(brew list --formula -1 2>/dev/null | tr '\n' ' ') "
+installed_casks=" $(brew list --cask -1 2>/dev/null | tr '\n' ' ') "
+outdated_formulae=" $(brew outdated --formula --quiet 2>/dev/null | tr '\n' ' ') "
+outdated_casks=" $(brew outdated --cask --quiet 2>/dev/null | tr '\n' ' ') "
+
+# Tap-qualified names (databricks/tap/databricks) are listed by brew under the
+# short name.
+in_list() {
+  case "$1" in
+    *" $2 "* | *" ${2##*/} "*) return 0 ;;
+  esac
+  return 1
+}
+
+handle_package() {
+  local kind="$1" name="$2" installed outdated
+  if [ "$kind" = formula ]; then
+    installed="$installed_formulae" outdated="$outdated_formulae"
+  else
+    installed="$installed_casks" outdated="$outdated_casks"
+  fi
+
+  if in_list "$installed" "$name"; then
+    if ! in_list "$outdated" "$name"; then
+      done_current+=" $name"
+    elif brew upgrade "--$kind" "$name"; then
+      done_upgraded+=" $name"
+    else
+      done_failed+=" $name"
+    fi
+    return
+  fi
+
+  if brew install "--$kind" "$name" 2>&1 | tee "$log"; then
+    done_installed+=" $name"
+  elif [ "$kind" = cask ] && grep -q "already an App at" "$log"; then
+    # Installed by hand before the first apply (Chrome and Slack are the
+    # usual ones). Adopting hands it to Homebrew when the versions match; if
+    # they differ, the app is left alone and keeps updating itself.
+    if brew install --cask --adopt "$name" >/dev/null 2>&1; then
+      done_installed+=" $name(adopted)"
+    else
+      done_outside+=" $name"
+    fi
+  else
+    done_failed+=" $name"
+  fi
+}
+
+echo "==> Homebrew formulae"
+{{ range .brew.formulae -}}
+handle_package formula {{ . | quote }}
+{{ end }}
+echo "==> Homebrew casks"
+{{ range .brew.casks -}}
+handle_package cask {{ . | quote }}
+{{ end }}
+# --force installs the latest version, upgrading one that is already there
+echo "==> VS Code extensions"
+if command -v code >/dev/null 2>&1; then
+{{- range .vscodeExtensions }}
+  code --install-extension {{ . | quote }} --force >/dev/null 2>&1 || done_failed+=" {{ . }}"
+{{- end }}
+else
+  done_failed+=" vscode-extensions(no 'code' on PATH)"
+fi
+
+echo "==> Packages summary"
+[ -n "$done_installed" ] && echo "    installed:${done_installed}"
+[ -n "$done_upgraded" ] && echo "    upgraded:${done_upgraded}"
+[ -n "$done_current" ] && echo "    up to date: $(echo $done_current | wc -w | tr -d ' ') packages"
+if [ -n "$done_outside" ]; then
+  echo "    ! installed outside Homebrew, left as is:${done_outside}"
+  echo "      They keep working and update themselves. To hand one to Homebrew:"
+  echo "      brew install --cask --force <name>"
+fi
+if [ -n "$done_failed" ]; then
+  echo "    ! FAILED:${done_failed}"
+  echo "      The rest of the apply carried on; the next chezmoi apply retries these."
+fi
+exit 0
