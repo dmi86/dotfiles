@@ -1,0 +1,14 @@
+#!/bin/bash
+# jenv-add-all — register every JDK in the usual macOS locations with jenv.
+# jenv runs any `jenv-<name>` on PATH as `jenv <name>`, so this is
+# `jenv add-all`: run it after installing a JDK by hand (`brew install
+# openjdk@25`, a JDK cask, ...). chezmoi apply runs it after the package
+# install. JDKs jenv already knows are skipped.
+command -v jenv >/dev/null || exit 0
+for home in /Library/Java/JavaVirtualMachines/*/Contents/Home \
+  "$(brew --prefix)"/opt/openjdk*/libexec/openjdk.jdk/Contents/Home; do
+  [ -x "$home/bin/java" ] || continue
+  jenv add "$home" >/dev/null 2>&1
+  echo "jenv: $home"
+done
+exit 0

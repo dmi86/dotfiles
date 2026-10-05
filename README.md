@@ -49,6 +49,11 @@ committed. Nothing is pre-filled, so nobody inherits someone else's identity. Re
 | GPG signing key | `user.signingkey`; blank skips commit signing |
 | Shared Dock | Opt-in, default no — see [Dock](#dock) |
 
+Repos go in `~/Develop`, created empty by the dotfiles. To keep them on a case-sensitive volume,
+which avoids filename-case bugs that only show up in deployment, set it up as described in the
+[Git guide](https://enter-lmwiki.launchmetrics.com/en/guides/first_steps/git#macos-create-case-sensitive-volume-for-storing-repos)
+before cloning anything.
+
 `chezmoi apply` overwrites the files it manages (hence `chezmoi diff` first on a machine that
 already has a `.zshrc`, `.gitconfig` or `.scripts`) and removes `.vimrc` (`.chezmoiremove`).
 
@@ -57,8 +62,8 @@ After apply, fill in the `REPLACE_WITH_*` placeholders in `~/.npmrc` (GitHub Pac
 
 ## What gets installed
 
-[`.chezmoidata/packages.yaml`](.chezmoidata/packages.yaml) is the list. `run_20-install-packages`
-turns it into a Brewfile and runs `brew bundle install` on every apply: missing packages are
+The [`Brewfile`](Brewfile) is the list. `run_after_20-install-packages` runs `brew bundle install`
+on it on every apply: missing packages are
 installed, outdated ones upgraded (self-updating casks like Chrome are left to their own updater),
 and a failed entry is reported without stopping the apply, so the next apply retries it. An app
 installed by hand before the first apply (Chrome, Slack) shows up as failed but keeps working; to
@@ -71,7 +76,7 @@ hand it to Homebrew, `brew install --cask --force <name>`.
 | Git | `git`, `gh`, `gnupg`, `pinentry-mac`, `pre-commit` | `gh` backs the git credential helper; commits are GPG-signed with a GUI passphrase prompt |
 | Node | `nodenv`, `yarn`, `npm-check-updates` | |
 | Python | `pyenv`, `btrachey/pyenv/pyenv-default-packages` | Installs `dot_pyenv/default-packages` into every Python version |
-| Java | `jenv`, `openjdk@17`, `openjdk@21`, `microsoft-openjdk@11` | `run_onchange_after_22-register-jdks` registers the JDKs with jenv, so `jenv local <version>` just works |
+| Java | `jenv`, `openjdk@17`, `openjdk@21`, `microsoft-openjdk@11` | Every apply ends with `jenv add-all`, which registers every JDK in the usual macOS locations, so `jenv local <version>` just works. Run it yourself after installing another JDK |
 | AWS & data | `awscli`, `leapp-cli` + `leapp`, `session-manager-plugin`, `databricks/tap/databricks` | The Leapp CLI and desktop app are separate packages |
 | Apps | `iterm2`, `font-meslo-lg-nerd-font`, `visual-studio-code`, `google-chrome`, `firefox`, `postman`, `slack`, `zoom`, `spotify`, `twingate`, `dockutil` | The Nerd Font supplies the glyphs eza and starship draw |
 | AI tooling | `claude-code`, `claude`, `antigravity-cli`, `skills` | CLI and desktop app; `antigravity-cli` provides `antigravity` (`agy`), not `gemini` |
@@ -139,9 +144,10 @@ without the apps still missing; delete the marker to apply it again.
 | Path | Becomes / does |
 |---|---|
 | `.chezmoi.toml.tmpl` | The `chezmoi init` prompts |
-| `.chezmoidata/` | `packages.yaml` (install list), `leapp.yaml` (Leapp config) |
+| `Brewfile` | The install list (`brew bundle`) |
+| `.chezmoidata/leapp.yaml` | Leapp config |
 | `.chezmoiscripts/` | Prezto, packages, jenv, LM-Build, Dock |
 | `dot_*`, `private_dot_*`, `Library/…` | The dotfiles themselves (`~/.zshrc`, `~/.gitconfig`, `~/.aws/config`, VS Code settings, …) |
-| `dot_local/bin/` | `~/.local/bin/leapp-bootstrap` |
-| `Develop/.keep` | Creates `~/Develop` (the `.keep` file itself is not written) |
-| `.chezmoiignore` / `.chezmoiremove` | Keep `README.md` out of `~`; remove `~/.vimrc` |
+| `dot_local/bin/` | `~/.local/bin/leapp-bootstrap` and `jenv-add-all` (`jenv add-all`) |
+| `Develop/.keep` | Creates an empty `~/Develop` for repos (the `.keep` file itself is not written) |
+| `.chezmoiignore` / `.chezmoiremove` | Keep `README.md` and `Brewfile` out of `~`; remove `~/.vimrc` |

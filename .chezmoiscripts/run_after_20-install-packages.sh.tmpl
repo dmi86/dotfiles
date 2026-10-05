@@ -1,0 +1,8 @@
+#!/bin/bash
+# Install and upgrade everything in the repo's Brewfile (edit that, not this),
+# then register any JDKs with jenv. Runs on every apply, so outdated packages
+# get upgraded too; a failed entry only warns and is retried on the next apply.
+brew bundle install --file "{{ .chezmoi.sourceDir }}/Brewfile" ||
+  echo "brew bundle: some packages failed (listed above); the next chezmoi apply retries them" >&2
+"$HOME/.local/bin/jenv-add-all"
+exit 0
