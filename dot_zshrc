@@ -37,10 +37,7 @@ setopt share_history # share history between different instances of the shell
 eval "$(pyenv init --path)"
 eval "$(pyenv init -)"
 
-# add prompt_starship_setup function to Prezto
-setopt prompt_subst interactive_comments
-ZPREZTODIR=${ZPREZTODIR:-${ZDOTDIR:-~}/.zprezto}
-echo 'eval "$(starship init zsh)"' >! $ZPREZTODIR/modules/prompt/functions/prompt_starship_setup
+setopt interactive_comments
 
 export PATH="$HOME/.GIS-lm-build/bin:$PATH"
 eval "$(jenv init -)"
@@ -61,3 +58,6 @@ if command -v fzf > /dev/null; then
   export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --icons=auto --color=always {}'"
   eval "$(fzf --zsh)"
 fi
+
+# Prompt — starship (dot_config/starship.toml). Prezto's own prompt theme is off.
+eval "$(starship init zsh)"
