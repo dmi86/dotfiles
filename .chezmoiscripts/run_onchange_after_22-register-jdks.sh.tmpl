@@ -5,12 +5,11 @@
 # The opt/ paths survive upgrades, and jenv add skips JDKs it already knows.
 set -uo pipefail
 
-eval "$(/opt/homebrew/bin/brew shellenv)"
 command -v jenv >/dev/null 2>&1 || exit 0
 
 for home in \
 {{- range .brew.formulae }}{{ if hasPrefix "openjdk" . }}
-  "$HOMEBREW_PREFIX/opt/{{ . }}/libexec/openjdk.jdk/Contents/Home" \
+  "$(brew --prefix)/opt/{{ . }}/libexec/openjdk.jdk/Contents/Home" \
 {{- end }}{{ end }}
 {{- range .brew.casks }}{{ if hasPrefix "microsoft-openjdk@" . }}
   "/Library/Java/JavaVirtualMachines/microsoft-{{ trimPrefix "microsoft-openjdk@" . }}.jdk/Contents/Home" \

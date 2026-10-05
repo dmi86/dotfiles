@@ -64,7 +64,7 @@ brew:
     # note above (one place for updates).
     - leapp-cli
     - skills
-    # Builds the opt-in shared Dock in run_after_40-configure-dock (.chezmoidata/dock.yaml)
+    # Builds the opt-in shared Dock in run_after_40-configure-dock
     - dockutil
     - npm-check-updates
     # AWS SSM Session Manager plugin ships as a Homebrew cask, not an npm

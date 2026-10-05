@@ -27,8 +27,8 @@ is missing, upgrades what is outdated (casks that update themselves, like Chrome
 left to their own updater) and carries on past a failed entry. A failure is reported but never
 stops the apply, and the next apply retries it.
 
-Prezto (`git pull`) and GIS-lm-build (newer GitHub release) follow the same rule: installed when
-missing, updated when behind.
+Prezto is cloned when missing and pulled on every apply. GIS-lm-build is installed once and
+then updates itself (`lm update`).
 
 | Group | Package | Purpose |
 |---|---|---|
@@ -68,7 +68,7 @@ missing, updated when behind.
 | | `postman` | API client |
 | | `slack`, `zoom` | Comms |
 | | `spotify` | Music — pinned in the opt-in shared Dock |
-| | `dockutil` | Builds the shared Dock from `.chezmoidata/dock.yaml` (see [Dock](#dock)) |
+| | `dockutil` | Builds the opt-in shared Dock (see [Dock](#dock)) |
 | | `twingate` | Zero-trust network access |
 | AI tooling | `claude-code` | Claude Code CLI |
 | | `claude` | Claude desktop app |
@@ -152,13 +152,12 @@ lm jira-setup         # same, with a Jira session cookie
   it: Leapp needs its workspace, which only exists once `Leapp.app` has been opened. Open it once,
   then run `leapp-bootstrap --login`, which configures everything and opens the SSO browser login
   to finish the session mapping (see [Leapp / AWS SSO](#leapp--aws-sso)).
-- **LM build.** Until `gh auth login` has run, every apply prints `lm-build: not installed yet`
-  and carries on. After it, the next `chezmoi apply` installs it and prints `lm version -v`.
-  `lm install-hooks` is not needed: it only sets the global `core.hooksPath`, which
-  `dot_gitconfig.tmpl` already sets to the same path. `lm github-setup` and `lm jira-setup` stay
-  manual because each one needs a browser session cookie. Later applies keep lm on the latest
-release: the swap mirrors `lm update` (new folder in, then `lm post-update`), done with `gh`
-because `lm update` needs the token `lm github-setup` creates.
+- **LM build.** Its release is in a private repo, so until `gh auth login` has run every apply
+  prints a hint and carries on; the next `chezmoi apply` after it installs lm (the README steps
+  of GIS-lm-build: download, extract, `lm version -v`). From then on lm updates itself with
+  `lm update`. `lm install-hooks` is not needed — `dot_gitconfig.tmpl` already sets the same
+  `core.hooksPath`. `lm github-setup` and `lm jira-setup` stay manual: each needs a browser
+  session cookie.
 - **Placeholder secrets** — `.npmrc` and `.databrickscfg` are written with `REPLACE_WITH_*`
   values. Fill in your own GitHub Packages token and Databricks host/token by hand; no real
   credential is ever committed to this repo.
@@ -169,9 +168,9 @@ because `lm update` needs the token `lm github-setup` creates.
 |---|---|
 | `.chezmoi.toml.tmpl` | Generates `~/.config/chezmoi/chezmoi.toml`; prompts for git name/work email/signing key |
 | `.chezmoidata/packages.yaml` | Source of truth for Homebrew formulae/casks and VS Code extensions |
-| `.chezmoidata/dock.yaml` | Shared Dock layout: pinned apps, Downloads stack, Dock settings |
 | `.chezmoidata/leapp.yaml` | Leapp AWS SSO integration, named profiles, and the session -> profile/region mapping |
-| `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, register the JDKs with jenv, create `~/Develop`, install GIS-lm-build, lay out the opt-in Dock |
+| `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, register the JDKs with jenv, install GIS-lm-build, lay out the opt-in Dock (apps and settings live in the script) |
+| `Develop/.keep` | Creates `~/Develop`; chezmoi creates the directory without writing the `.keep` file |
 | `.chezmoiremove` | Declares `.vimrc` removed — not managed here |
 | `.chezmoiignore` | Excludes `README.md` from the apply; it is repo docs, not a dotfile |
 | `dot_local/bin/executable_leapp-bootstrap.tmpl` | Becomes `~/.local/bin/leapp-bootstrap`: replays `leapp.yaml` through the `leapp` CLI, safe to re-run |
@@ -225,8 +224,8 @@ leapp session list --output=csv --columns="Session Name,Named Profile,Region/Loc
 
 **Opt-in.** The Dock is personal, so this only runs if you answered yes to the "shared Dock"
 question in `chezmoi init` (to change your answer later: `chezmoi init --prompt`).
-`run_after_40-configure-dock` then lays out the team Dock declared in
-[`.chezmoidata/dock.yaml`](.chezmoidata/dock.yaml):
+`run_after_40-configure-dock` then lays out the team Dock (the app list and settings are in the
+script itself):
 
 - **Pinned, left to right:** iTerm, Visual Studio Code, Google Chrome, 1Password, Slack, zoom,
   Leapp, Claude, Spotify.
@@ -239,9 +238,9 @@ It replaces the whole Dock, **once per machine, after every pinned app is instal
 - It runs after the package install on every apply, but does nothing until all the apps above
   are in `/Applications` — until then it prints which ones it is waiting for.
 - Once it has laid out the Dock it writes `~/.local/state/dotfiles/dock-configured` and never
-  runs again. Whatever you change in your own Dock afterwards is kept, and so is a later edit
-  to `dock.yaml`: that only shapes machines set up after it. (Not `run_once_`: chezmoi keys
-  that on the script's content, so editing `dock.yaml` would reset every Dock again.)
+  runs again. Whatever you change in your own Dock afterwards is kept, and a later change to
+  the script only shapes machines set up after it. (Not `run_once_`: chezmoi keys that on the
+  script's content, so every edit would reset every Dock again.)
 - `DOTFILES_DOCK_FORCE=1 chezmoi apply` lays it out now, without the apps still missing.
   Delete the marker file to have the shared layout applied again.
 

@@ -9,8 +9,6 @@
 # must not abort the apply.
 set -uo pipefail
 
-eval "$(/opt/homebrew/bin/brew shellenv)"
-
 brew bundle install --file=- <<'BREWFILE' ||
 {{- range .brew.formulae }}
 {{- $parts := splitList "/" . }}{{ if eq (len $parts) 3 }}

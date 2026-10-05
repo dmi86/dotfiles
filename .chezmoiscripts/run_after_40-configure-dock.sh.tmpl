@@ -1,63 +1,49 @@
+{{- if dig "optIn" "dock" false . -}}
 #!/bin/bash
-# Lay out the Dock from .chezmoidata/dock.yaml — edit the data file, not this.
+# Shared team Dock. Opt-in: only rendered when `chezmoi init` was answered yes
+# (data.optIn.dock); otherwise this script is empty and chezmoi skips it.
 #
-# Opt-in: only for machines that answered yes to the Dock question in
-# `chezmoi init` (data.optIn.dock); everyone else's Dock is never touched.
-#
-# Applied exactly once per machine, and only once every pinned app is
-# installed. Not run_once_: chezmoi keys that on the script's content, so any
-# later edit to dock.yaml would reset everyone's Dock again. Instead this runs
-# on every apply (run_after_, so after run_20-install-packages) and a marker
-# file records that the Dock was set up:
-#   - marker present            -> nothing to do, your Dock is yours
-#   - a pinned app still missing -> wait, the next chezmoi apply tries again
-#   - all apps present          -> lay out the Dock, write the marker
-# DOTFILES_DOCK_FORCE=1 chezmoi apply  lays it out now, skipping missing apps.
-set -uo pipefail
-{{ if not (dig "optIn" "dock" false .) }}
-exit 0
-{{- end }}
-
-eval "$(/opt/homebrew/bin/brew shellenv)"
-
+# Applied once per machine, after every pinned app is installed: it runs on
+# every apply until then, and a marker file stops it for good afterwards, so
+# later changes (yours, or to this list) never touch a Dock already set up.
+# DOTFILES_DOCK_FORCE=1 chezmoi apply  sets it up now, without missing apps.
 MARKER="$HOME/.local/state/dotfiles/dock-configured"
 [ -e "$MARKER" ] && exit 0
 
-if ! command -v dockutil >/dev/null 2>&1; then
-  echo "dock: dockutil not installed yet, the next chezmoi apply sets up the Dock" >&2
-  exit 0
-fi
-
 apps=(
-{{- range .dock.apps }}
-  {{ . | quote }}
-{{- end }}
+  /Applications/iTerm.app
+  "/Applications/Visual Studio Code.app"
+  "/Applications/Google Chrome.app"
+  /Applications/1Password.app
+  /Applications/Slack.app
+  /Applications/zoom.us.app
+  /Applications/Leapp.app
+  /Applications/Claude.app
+  /Applications/Spotify.app
 )
 
 missing=""
-for app in "${apps[@]}"; do
-  [ -d "$app" ] || missing+=" $(basename "$app" .app)"
-done
+command -v dockutil >/dev/null || missing=" dockutil"
+for app in "${apps[@]}"; do [ -d "$app" ] || missing+=" $(basename "$app" .app)"; done
 if [ -n "$missing" ] && [ "${DOTFILES_DOCK_FORCE:-0}" != 1 ]; then
-  echo "dock: waiting for${missing} — the next chezmoi apply sets up the Dock" >&2
-  echo "      (or DOTFILES_DOCK_FORCE=1 chezmoi apply to set it up without them)" >&2
+  echo "dock: waiting for${missing}; the next chezmoi apply sets up the Dock" >&2
   exit 0
 fi
 
-echo "==> Dock"
 dockutil --remove all --no-restart >/dev/null
-for app in "${apps[@]}"; do
-  [ -d "$app" ] && dockutil --add "$app" --no-restart >/dev/null
-done
-{{- if .dock.downloadsStack }}
+for app in "${apps[@]}"; do [ -d "$app" ] && dockutil --add "$app" --no-restart >/dev/null; done
 dockutil --add "$HOME/Downloads" --section others --display stack --view fan --sort dateadded --no-restart >/dev/null
-{{- end }}
-{{ range $key, $value := .dock.settings }}
-defaults write com.apple.dock {{ $key }} {{ if kindIs "bool" $value }}-bool{{ else if kindIs "string" $value }}-string{{ else }}-int{{ end }} {{ $value | toString | quote }}
-{{- end }}
 
+defaults write com.apple.dock orientation -string bottom
+defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock tilesize -int 61
+defaults write com.apple.dock magnification -bool false
+defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock mru-spaces -bool false     # don't reorder Spaces by recent use
+defaults write com.apple.dock wvous-br-corner -int 4     # bottom-right hot corner: Desktop
+defaults write com.apple.dock wvous-br-modifier -int 0
 killall Dock
 
 mkdir -p "$(dirname "$MARKER")" && date >"$MARKER"
-echo "    done — applied once; delete $MARKER to apply the shared layout again"
-exit 0
+echo "==> Dock set up (once; delete $MARKER to apply it again)"
+{{- end }}
