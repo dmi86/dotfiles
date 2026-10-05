@@ -1,6 +1,7 @@
 # Shared Dock layout, applied once per machine — after every app below is
 # installed — by .chezmoiscripts/run_after_40-configure-dock.sh.tmpl (SQA-3939).
 # Editing this does not touch machines already set up; it only shapes new ones.
+# Opt-in: only applied when `chezmoi init` was answered yes (data.optIn.dock).
 # Every app here must be installed by packages.yaml or come with the Mac.
 dock:
   # Left to right. The Dock waits until all of these are installed.

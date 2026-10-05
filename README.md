@@ -21,16 +21,11 @@ the account inventory alone is enough that this repo should not be made public.
 ## What gets installed
 
 [`.chezmoidata/packages.yaml`](.chezmoidata/packages.yaml) is the source of truth — edit it, not
-the scripts. `run_20-install-packages` runs on every `chezmoi apply` and handles each package on
-its own, so adding a line there is all that is needed:
-
-- **Missing** -> installed.
-- **Installed but outdated** -> upgraded. Casks that update themselves (Chrome, Slack, Claude…)
-  are left to their own updater, which is also what Homebrew does.
-- **Installed and current** -> skipped.
-- **Fails** -> recorded, and the rest carry on. The apply is never stopped by one package; a
-  summary at the end lists what was installed, upgraded, left alone or failed, and the next
-  apply retries the failures.
+the scripts. `run_20-install-packages` turns it into a Brewfile and runs `brew bundle install` on
+every `chezmoi apply`, so adding a line there is all that is needed. `brew bundle` installs what
+is missing, upgrades what is outdated (casks that update themselves, like Chrome or Slack, are
+left to their own updater) and carries on past a failed entry. A failure is reported but never
+stops the apply, and the next apply retries it.
 
 Prezto (`git pull`) and GIS-lm-build (newer GitHub release) follow the same rule: installed when
 missing, updated when behind.
@@ -61,7 +56,7 @@ missing, updated when behind.
 | Python | `pyenv` | Python version manager |
 | | `btrachey/pyenv/pyenv-default-packages` | Tap formula; installs `dot_pyenv/default-packages` (`pylint`, `autopep8`) into every version |
 | Java | `jenv` | JDK version manager |
-| | `openjdk@17`, `openjdk@21`, `microsoft-openjdk@11` | The JDKs jenv manages; kept to compile the remaining Selenium repos. Registered with jenv by `run_after_22-register-jdks`, so `jenv local <version>` works straight away |
+| | `openjdk@17`, `openjdk@21`, `microsoft-openjdk@11` | The JDKs jenv manages; kept to compile the remaining Selenium repos. Registered with jenv by `run_onchange_after_22-register-jdks` (re-runs when the JDK list changes), so `jenv local <version>` works straight away |
 | AWS & data | `awscli` | AWS CLI |
 | | `leapp-cli` + `leapp` | AWS SSO session manager — CLI and desktop app are separate packages |
 | | `session-manager-plugin` | Lets the AWS CLI open SSM sessions to managed instances |
@@ -72,7 +67,7 @@ missing, updated when behind.
 | | `google-chrome`, `firefox` | Browsers |
 | | `postman` | API client |
 | | `slack`, `zoom` | Comms |
-| | `spotify` | Music — pinned in the shared Dock |
+| | `spotify` | Music — pinned in the opt-in shared Dock |
 | | `dockutil` | Builds the shared Dock from `.chezmoidata/dock.yaml` (see [Dock](#dock)) |
 | | `twingate` | Zero-trust network access |
 | AI tooling | `claude-code` | Claude Code CLI |
@@ -125,6 +120,7 @@ chezmoi apply
 | Short handle | Branch names built by `gbranch()` — `jdoe` gives `m-jdoe_20260916_a1b2c3d_04217` |
 | Work email | `user.email` in `.gitconfig` |
 | GPG signing key | `user.signingkey`; leave blank to skip commit signing |
+| Shared Dock | Opt-in, default no — applies the team Dock layout once (see [Dock](#dock)) |
 
 Nothing is pre-filled, so you cannot accidentally inherit someone else's identity. There is no
 work/personal identity split — everything uses the work identity.
@@ -133,10 +129,9 @@ work/personal identity split — everything uses the work identity.
 already has a `.zshrc`, `.gitconfig`, or `.scripts`. It also *removes* `.vimrc`, declared in
 `.chezmoiremove`.
 
-Apps you installed by hand before the first apply (Chrome and Slack are the usual ones) never
-stop the apply. When the installed version matches Homebrew's, Homebrew adopts it and updates it
-from then on. Otherwise it is left as is and keeps updating itself; to hand it over anyway, run
-`brew install --cask --force <name>`.
+Apps you installed by hand before the first apply (Chrome and Slack are the usual ones) show up
+as failed in the `brew bundle` output, but the apply carries on and the app keeps working and
+updating itself. To hand one over to Homebrew, run `brew install --cask --force <name>`.
 
 ### After the first apply
 
@@ -153,10 +148,10 @@ lm github-setup       # paste a GitHub session cookie, following the prompts
 lm jira-setup         # same, with a Jira session cookie
 ```
 
-- **Leapp.** On a fresh machine the first apply ends with `no Leapp workspace yet`. Open
-  `Leapp.app` once, then run `leapp-bootstrap`, **not** `chezmoi apply` — the apply step is
-  `run_onchange_`, so it is skipped until its content changes. `--login` also opens the SSO
-  browser login and finishes the session mapping (see [Leapp / AWS SSO](#leapp--aws-sso)).
+- **Leapp.** `chezmoi apply` installs Leapp and the `leapp-bootstrap` command but does not run
+  it: Leapp needs its workspace, which only exists once `Leapp.app` has been opened. Open it once,
+  then run `leapp-bootstrap --login`, which configures everything and opens the SSO browser login
+  to finish the session mapping (see [Leapp / AWS SSO](#leapp--aws-sso)).
 - **LM build.** Until `gh auth login` has run, every apply prints `lm-build: not installed yet`
   and carries on. After it, the next `chezmoi apply` installs it and prints `lm version -v`.
   `lm install-hooks` is not needed: it only sets the global `core.hooksPath`, which
@@ -176,11 +171,10 @@ because `lm update` needs the token `lm github-setup` creates.
 | `.chezmoidata/packages.yaml` | Source of truth for Homebrew formulae/casks and VS Code extensions |
 | `.chezmoidata/dock.yaml` | Shared Dock layout: pinned apps, Downloads stack, Dock settings |
 | `.chezmoidata/leapp.yaml` | Leapp AWS SSO integration, named profiles, and the session -> profile/region mapping |
-| `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, register the JDKs with jenv, configure Leapp, create `~/Develop`, install GIS-lm-build, lay out the Dock |
+| `.chezmoiscripts/` | Bootstrap Prezto, install everything in `packages.yaml`, register the JDKs with jenv, create `~/Develop`, install GIS-lm-build, lay out the opt-in Dock |
 | `.chezmoiremove` | Declares `.vimrc` removed — not managed here |
 | `.chezmoiignore` | Excludes `README.md` from the apply; it is repo docs, not a dotfile |
-| `.chezmoitemplates/leapp-bootstrap.sh` | The Leapp bootstrap itself; replays `leapp.yaml` through the `leapp` CLI, safe to re-run. Embedded by both consumers below |
-| `dot_local/bin/executable_leapp-bootstrap.tmpl` | Becomes `~/.local/bin/leapp-bootstrap`, so the `--login` step can be run by hand |
+| `dot_local/bin/executable_leapp-bootstrap.tmpl` | Becomes `~/.local/bin/leapp-bootstrap`: replays `leapp.yaml` through the `leapp` CLI, safe to re-run |
 | `dot_pyenv/default-packages` | Python tools installed into every pyenv-managed version |
 | `dot_gitconfig.tmpl` | Identity, `hooksPath` (LM git-hooks), `gh`-backed credential helpers, delta as pager |
 | `dot_gitignore` | Global gitignore |
@@ -209,17 +203,17 @@ Partially automated. The split matters:
   sharing the `default` profile, which breaks every `aws --profile <name>` call and the AWS
   VS Code toolkit. That mapping lives in `.chezmoidata/leapp.yaml`.
 
-`chezmoi apply` runs the bootstrap script — `run_onchange_after_25-configure-leapp` embeds
-`.chezmoitemplates/leapp-bootstrap.sh` verbatim rather than shelling out to the installed copy —
-which creates the integration, sets the default region, and creates the named profiles. Mapping
-sessions needs the integration online, and the SSO login opens a browser, so that step is opt-in,
-using the same script installed as `~/.local/bin/leapp-bootstrap`:
+`chezmoi apply` installs `~/.local/bin/leapp-bootstrap` but does not run it — Leapp needs the
+workspace `Leapp.app` creates on first launch, and the SSO login opens a browser. Run it by hand
+once Leapp has been opened, and again after pulling a change to `leapp.yaml`:
 
 ```sh
-leapp-bootstrap --login
+leapp-bootstrap --login   # creates the integration, default region and named profiles,
+                          # logs in, syncs and maps every session
 ```
 
-Every step is a no-op when already in the desired state, so re-running is free. To refresh the
+Without `--login` it does everything except the browser login. Every step is a no-op when
+already in the desired state, so re-running is free. To refresh the
 mapping in this repo after accounts are added or renamed in AWS SSO, regenerate the `sessions`
 list in `.chezmoidata/leapp.yaml` from:
 
@@ -229,7 +223,9 @@ leapp session list --output=csv --columns="Session Name,Named Profile,Region/Loc
 
 ## Dock
 
-`run_after_40-configure-dock` gives every new machine the same Dock, declared in
+**Opt-in.** The Dock is personal, so this only runs if you answered yes to the "shared Dock"
+question in `chezmoi init` (to change your answer later: `chezmoi init --prompt`).
+`run_after_40-configure-dock` then lays out the team Dock declared in
 [`.chezmoidata/dock.yaml`](.chezmoidata/dock.yaml):
 
 - **Pinned, left to right:** iTerm, Visual Studio Code, Google Chrome, 1Password, Slack, zoom,

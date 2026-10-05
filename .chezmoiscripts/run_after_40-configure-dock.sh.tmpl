@@ -1,6 +1,9 @@
 #!/bin/bash
 # Lay out the Dock from .chezmoidata/dock.yaml — edit the data file, not this.
 #
+# Opt-in: only for machines that answered yes to the Dock question in
+# `chezmoi init` (data.optIn.dock); everyone else's Dock is never touched.
+#
 # Applied exactly once per machine, and only once every pinned app is
 # installed. Not run_once_: chezmoi keys that on the script's content, so any
 # later edit to dock.yaml would reset everyone's Dock again. Instead this runs
@@ -11,6 +14,9 @@
 #   - all apps present          -> lay out the Dock, write the marker
 # DOTFILES_DOCK_FORCE=1 chezmoi apply  lays it out now, skipping missing apps.
 set -uo pipefail
+{{ if not (dig "optIn" "dock" false .) }}
+exit 0
+{{- end }}
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
