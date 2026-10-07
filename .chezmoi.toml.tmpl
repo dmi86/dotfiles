@@ -11,3 +11,9 @@
 [data.git.work]
     email = {{ promptStringOnce . "git.work.email" "Work git email" | quote }}
     signkey = {{ promptStringOnce . "git.work.signkey" "Work GPG signing key (blank to skip commit signing)" | quote }}
+
+# Opt-ins for things that change personal setup rather than tooling.
+[data.optIn]
+    # The shared team Dock (run_after_40-configure-dock). It replaces your Dock once,
+    # so it is off unless you say yes.
+    dock = {{ promptBoolOnce . "optIn.dock" "Apply the shared team Dock layout (replaces your current Dock once)" false }}

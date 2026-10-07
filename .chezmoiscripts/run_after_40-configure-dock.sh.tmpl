@@ -1,0 +1,49 @@
+{{- if dig "optIn" "dock" false . -}}
+#!/bin/bash
+# Shared team Dock. Opt-in: only rendered when `chezmoi init` was answered yes
+# (data.optIn.dock); otherwise this script is empty and chezmoi skips it.
+#
+# Applied once per machine, after every pinned app is installed: it runs on
+# every apply until then, and a marker file stops it for good afterwards, so
+# later changes (yours, or to this list) never touch a Dock already set up.
+# DOTFILES_DOCK_FORCE=1 chezmoi apply  sets it up now, without missing apps.
+MARKER="$HOME/.local/state/dotfiles/dock-configured"
+[ -e "$MARKER" ] && exit 0
+
+apps=(
+  /Applications/iTerm.app
+  "/Applications/Visual Studio Code.app"
+  "/Applications/Google Chrome.app"
+  /Applications/1Password.app
+  /Applications/Slack.app
+  /Applications/zoom.us.app
+  /Applications/Leapp.app
+  /Applications/Claude.app
+  /Applications/Spotify.app
+)
+
+missing=""
+command -v dockutil >/dev/null || missing=" dockutil"
+for app in "${apps[@]}"; do [ -d "$app" ] || missing+=" $(basename "$app" .app)"; done
+if [ -n "$missing" ] && [ "${DOTFILES_DOCK_FORCE:-0}" != 1 ]; then
+  echo "dock: waiting for${missing}; the next chezmoi apply sets up the Dock" >&2
+  exit 0
+fi
+
+dockutil --remove all --no-restart >/dev/null
+for app in "${apps[@]}"; do [ -d "$app" ] && dockutil --add "$app" --no-restart >/dev/null; done
+dockutil --add "$HOME/Downloads" --section others --display stack --view fan --sort dateadded --no-restart >/dev/null
+
+defaults write com.apple.dock orientation -string bottom
+defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock tilesize -int 61
+defaults write com.apple.dock magnification -bool false
+defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock mru-spaces -bool false     # don't reorder Spaces by recent use
+defaults write com.apple.dock wvous-br-corner -int 4     # bottom-right hot corner: Desktop
+defaults write com.apple.dock wvous-br-modifier -int 0
+killall Dock
+
+mkdir -p "$(dirname "$MARKER")" && date >"$MARKER"
+echo "==> Dock set up (once; delete $MARKER to apply it again)"
+{{- end }}

@@ -1,4 +1,5 @@
-# Repo documentation, not a dotfile — without this `chezmoi apply` would write
-# it to ~/README.md. Everything else at the root is either a dot_/private_/
-# Library source or a .chezmoi* control file, so nothing else needs listing.
+# Repo files that are not dotfiles; without this `chezmoi apply` would write
+# them into ~. Brewfile is read from the source directory by
+# run_after_20-install-packages.
 README.md
+Brewfile

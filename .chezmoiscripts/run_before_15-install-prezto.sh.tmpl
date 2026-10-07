@@ -1,0 +1,10 @@
+#!/bin/bash
+# Clone Prezto, or update it (same steps as Prezto's zprezto-update). Runs on
+# every apply; a failure only warns.
+PREZTO="{{ .chezmoi.homeDir }}/.zprezto"
+if [ -d "$PREZTO" ]; then
+  git -C "$PREZTO" pull --ff-only --quiet && git -C "$PREZTO" submodule update --init --recursive --quiet
+else
+  git clone --recursive --quiet https://github.com/sorin-ionescu/prezto.git "$PREZTO"
+fi || echo "prezto: clone/update failed, the next chezmoi apply retries it" >&2
+exit 0
